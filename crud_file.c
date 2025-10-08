@@ -169,7 +169,7 @@ void createUser() {
     }
 
     int age;
-    if (!read_int_bounded("Enter Age (0-150): ", 0, 150, &age)) {
+    if (!read_int_bounded("Enter Age (0-100): ", 0, 100, &age)) {
         printf("Input error - aborting create.\n");
         return;
     }
