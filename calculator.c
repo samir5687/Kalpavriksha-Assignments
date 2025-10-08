@@ -4,7 +4,7 @@
 #define MAX_LENGTH 100
 
 
-int myIsDigit(unsigned char ch) {
+int isDigit(unsigned char ch) {
     return (ch >= '0' && ch <= '9');
 }
 
@@ -62,9 +62,9 @@ int evaluateExpression(char *expression, int *errorFlag) {
             continue;
 
      
-        else if (myIsDigit((unsigned char)expression[index])) {
+        else if (isDigit((unsigned char)expression[index])) {
             int number = 0;
-            while (index < myStrLen(expression) && myIsDigit((unsigned char)expression[index])) {
+            while (index < myStrLen(expression) && isDigit((unsigned char)expression[index])) {
                 number = (number * 10) + (expression[index] - '0');
                 index++;
             }
