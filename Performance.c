@@ -1,32 +1,32 @@
 #include <stdio.h>
 #include <string.h>
 
+
 struct Student {
     int rollNumber;
     char name[50];
-    float marks1, marks2, marks3;
+    float marks[3];
     float totalMarks;
     float averageMarks;
     char grade;
 };
 
-float calculateTotal(float m1, float m2, float m3);
+float calculateTotal(float m[]);
 float calculateAverage(float total);
 char assignGrade(float avg);
 void displayPerformance(char grade);
 void printRollNumbersRecursively(struct Student students[], int index, int count);
 int isDuplicateRoll(struct Student students[], int currentIndex, int roll);
+void flushInput();
+int isNameValid(char name[]);
 
 int main() {
     int numberOfStudents, i;
 
     printf("Enter number of students: ");
-    scanf("%d", &numberOfStudents);
-
- 
-    if (numberOfStudents <= 0) {
-        printf("Invalid number of students. Exiting program.\n");
-        return 0;
+    while (scanf("%d", &numberOfStudents) != 1 || numberOfStudents <= 0) {
+        printf("Invalid input! Please enter a valid positive number: ");
+        flushInput();
     }
 
     struct Student students[numberOfStudents];
@@ -37,43 +37,60 @@ int main() {
         int roll;
         while (1) {
             printf("Roll Number: ");
-            scanf("%d", &roll);
+            if (scanf("%d", &roll) != 1) {
+                printf("Invalid input! Please enter a number.\n");
+                flushInput();
+                continue;
+            }
 
             if (roll <= 0) {
-                printf("Invalid roll number .Roll number must be positive.\n");
+                printf("Roll number must be positive.\n");
                 continue;
             }
 
             if (isDuplicateRoll(students, i, roll)) {
-                printf("Roll number already exists. Please enter a different roll number.\n");
+                printf("Roll number already exists. Please enter a different one.\n");
             } else {
                 students[i].rollNumber = roll;
                 break;
             }
         }
 
-        printf("Name: ");
-        scanf("%s", students[i].name);
+       
+        while (1) {
+            printf("Name: ");
+            scanf("%s", students[i].name);
+            if (isNameValid(students[i].name)) {
+                break;
+            } else {
+                printf("Invalid name! Only alphabets allowed.\n");
+            }
+        }
 
        
         while (1) {
             printf("Enter marks in 3 subjects: ");
-            scanf("%f %f %f", &students[i].marks1, &students[i].marks2, &students[i].marks3);
+            if (scanf("%f %f %f", &students[i].marks[0], &students[i].marks[1], &students[i].marks[2]) != 3) {
+                printf("Invalid input! Please enter numeric marks.\n");
+                flushInput();
+                continue;
+            }
 
-            if ((students[i].marks1 < 0 || students[i].marks1 > 100) ||
-                (students[i].marks2 < 0 || students[i].marks2 > 100) ||
-                (students[i].marks3 < 0 || students[i].marks3 > 100)) {
-                printf("Invalid marks entered. Marks should be between 0 and 100.\n");
+            if ((students[i].marks[0] < 0 || students[i].marks[0] > 100) ||
+                (students[i].marks[1] < 0 || students[i].marks[1] > 100) ||
+                (students[i].marks[2] < 0 || students[i].marks[2] > 100)) {
+                printf("Marks should be between 0 and 100.\n");
             } else {
                 break;
             }
         }
 
-        students[i].totalMarks = calculateTotal(students[i].marks1, students[i].marks2, students[i].marks3);
+        students[i].totalMarks = calculateTotal(students[i].marks);
         students[i].averageMarks = calculateAverage(students[i].totalMarks);
         students[i].grade = assignGrade(students[i].averageMarks);
     }
 
+   
     printf("\nStudent Performance\n");
     for (i = 0; i < numberOfStudents; i++) {
         printf("Roll: %d\n", students[i].rollNumber);
@@ -98,8 +115,9 @@ int main() {
     return 0;
 }
 
-float calculateTotal(float m1, float m2, float m3) {
-    return m1 + m2 + m3;
+
+float calculateTotal(float m[]) {
+    return m[0] + m[1] + m[2];
 }
 
 float calculateAverage(float total) {
@@ -141,11 +159,27 @@ void printRollNumbersRecursively(struct Student students[], int index, int count
     printRollNumbersRecursively(students, index + 1, count);
 }
 
+
 int isDuplicateRoll(struct Student students[], int currentIndex, int roll) {
     for (int i = 0; i < currentIndex; i++) {
-        if (students[i].rollNumber == roll) {
+        if (students[i].rollNumber == roll)
             return 1;
-        }
     }
     return 0;
+}
+
+void flushInput() {
+    char temp;
+    while ((temp = getchar()) != '\n' && temp != EOF);
+}
+
+int isNameValid(char name[]) {
+    int i = 0;
+    while (name[i] != '\0') {
+        if (!((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z'))) {
+            return 0; 
+        }
+        i++;
+    }
+    return 1; 
 }
