@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 void inputMatrix(int *matrix, int size) {
     printf("Enter %d×%d matrix elements (0–255):\n", size, size);
     int *ptr = matrix;
@@ -10,8 +9,8 @@ void inputMatrix(int *matrix, int size) {
             int value;
             while (1) {
                 if (scanf("%d", &value) != 1) {
-                    printf("Invalid input.Enter an integer 0–255: ");
-                    while (getchar() != '\n'); 
+                    printf("Invalid input. Enter an integer 0–255: ");
+                    while (getchar() != '\n');
                     continue;
                 }
                 if (value >= 0 && value <= 255) {
@@ -25,7 +24,6 @@ void inputMatrix(int *matrix, int size) {
     }
 }
 
-
 void printMatrix(int *matrix, int size) {
     int *ptr = matrix;
     for (int row = 0; row < size; row++) {
@@ -36,15 +34,14 @@ void printMatrix(int *matrix, int size) {
     }
 }
 
-
 void transposeMatrix(int *matrix, int size) {
     for (int row = 0; row < size; row++) {
         for (int col = row + 1; col < size; col++) {
-            int *cell1 = matrix + row * size + col;
-            int *cell2 = matrix + col * size + row;
-            int temp = *cell1;
-            *cell1 = *cell2;
-            *cell2 = temp;
+            int *cellA = matrix + row * size + col;
+            int *cellB = matrix + col * size + row;
+            int temp = *cellA;
+            *cellA = *cellB;
+            *cellB = temp;
         }
     }
 }
@@ -52,55 +49,51 @@ void transposeMatrix(int *matrix, int size) {
 void reverseRows(int *matrix, int size) {
     for (int row = 0; row < size; row++) {
         for (int col = 0; col < size / 2; col++) {
-            int *leftCell = matrix + row * size + col;
-            int *rightCell = matrix + row * size + (size - 1 - col);
-            int temp = *leftCell;
-            *leftCell = *rightCell;
-            *rightCell = temp;
+            int *leftCellPtr = matrix + row * size + col;
+            int *rightCellPtr = matrix + row * size + (size - 1 - col);
+            int temp = *leftCellPtr;
+            *leftCellPtr = *rightCellPtr;
+            *rightCellPtr = temp;
         }
     }
 }
-
 
 void rotateMatrix90Clockwise(int *matrix, int size) {
     transposeMatrix(matrix, size);
     reverseRows(matrix, size);
 }
 
-
 void smoothMatrix(int *matrix, int size) {
-    int *tempRow = (int *)malloc(size * sizeof(int));
-    if (!tempRow) return;
+    int *tempBuffer = (int *)malloc(size * sizeof(int));
+    if (!tempBuffer) return;
 
     for (int row = 0; row < size; row++) {
         for (int col = 0; col < size; col++) {
             int sum = 0, count = 0;
 
-            
             for (int dRow = -1; dRow <= 1; dRow++) {
                 int neighborRow = row + dRow;
-                if (neighborRow < 0 || neighborRow >= size) 
-                continue;
+                if (neighborRow < 0 || neighborRow >= size)
+                    continue;
 
                 for (int dCol = -1; dCol <= 1; dCol++) {
                     int neighborCol = col + dCol;
-                    if (neighborCol < 0 || neighborCol >= size) 
-                    continue;
+                    if (neighborCol < 0 || neighborCol >= size)
+                        continue;
 
                     sum += *(matrix + neighborRow * size + neighborCol);
                     count++;
                 }
             }
-            *(tempRow + col) = sum / count;
+            *(tempBuffer + col) = sum / count;
         }
 
-       
         for (int col = 0; col < size; col++) {
-            *(matrix + row * size + col) = *(tempRow + col);
+            *(matrix + row * size + col) = *(tempBuffer + col);
         }
     }
 
-    free(tempRow);
+    free(tempBuffer);
 }
 
 int main() {
@@ -113,8 +106,8 @@ int main() {
     }
 
     int *matrix = (int *)malloc(matrixSize * matrixSize * sizeof(int));
-    if (!matrix) 
-    return 1;
+    if (!matrix)
+        return 1;
 
     inputMatrix(matrix, matrixSize);
 
