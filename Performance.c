@@ -1,185 +1,132 @@
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 
-struct Student {
-    int rollNumber;
-    char name[50];
-    float marks[3];
-    float totalMarks;
-    float averageMarks;
-    char grade;
-};
-
-float calculateTotal(float m[]);
-float calculateAverage(float total);
-char assignGrade(float avg);
-void displayPerformance(char grade);
-void printRollNumbersRecursively(struct Student students[], int index, int count);
-int isDuplicateRoll(struct Student students[], int currentIndex, int roll);
-void flushInput();
-int isNameValid(char name[]);
-
-int main() {
-    int numberOfStudents, i;
-
-    printf("Enter number of students: ");
-    while (scanf("%d", &numberOfStudents) != 1 || numberOfStudents <= 0) {
-        printf("Invalid input! Please enter a valid positive number: ");
-        flushInput();
+void inputMatrix(int *matrix, int matrixSize) {
+    printf("Enter %d×%d matrix elements (0–255):\n", matrixSize, matrixSize);
+    int *ptr = matrix;
+    for (int row = 0; row < matrixSize; row++) {
+        for (int col = 0; col < matrixSize; col++, ptr++) {
+            int value;
+            while (1) {
+                if (scanf("%d", &value) != 1) {
+                    printf("Invalid input. Enter an integer 0–255: ");
+                    while (getchar() != '\n');
+                    continue;
+                }
+                if (value >= 0 && value <= 255) {
+                    *ptr = value;
+                    break;
+                } else {
+                    printf("Out of range. Enter 0–255: ");
+                }
+            }
+        }
     }
+}
 
-    struct Student students[numberOfStudents];
 
-    for (i = 0; i < numberOfStudents; i++) {
-        printf("\nEnter details for student %d\n", i + 1);
-
-        int roll;
-        while (1) {
-            printf("Roll Number: ");
-            if (scanf("%d", &roll) != 1) {
-                printf("Invalid input! Please enter a number.\n");
-                flushInput();
-                continue;
-            }
-
-            if (roll <= 0) {
-                printf("Roll number must be positive.\n");
-                continue;
-            }
-
-            if (isDuplicateRoll(students, i, roll)) {
-                printf("Roll number already exists. Please enter a different one.\n");
-            } else {
-                students[i].rollNumber = roll;
-                break;
-            }
+void printMatrix(int *matrix, int matrixSize) {
+    int *ptr = matrix;
+    for (int row = 0; row < matrixSize; row++) {
+        for (int col = 0; col < matrixSize; col++, ptr++) {
+            printf("%d ", *ptr);
         }
-
-       
-        while (1) {
-            printf("Name: ");
-            scanf("%s", students[i].name);
-            if (isNameValid(students[i].name)) {
-                break;
-            } else {
-                printf("Invalid name! Only alphabets allowed.\n");
-            }
-        }
-
-       
-        while (1) {
-            printf("Enter marks in 3 subjects: ");
-            if (scanf("%f %f %f", &students[i].marks[0], &students[i].marks[1], &students[i].marks[2]) != 3) {
-                printf("Invalid input! Please enter numeric marks.\n");
-                flushInput();
-                continue;
-            }
-
-            if ((students[i].marks[0] < 0 || students[i].marks[0] > 100) ||
-                (students[i].marks[1] < 0 || students[i].marks[1] > 100) ||
-                (students[i].marks[2] < 0 || students[i].marks[2] > 100)) {
-                printf("Marks should be between 0 and 100.\n");
-            } else {
-                break;
-            }
-        }
-
-        students[i].totalMarks = calculateTotal(students[i].marks);
-        students[i].averageMarks = calculateAverage(students[i].totalMarks);
-        students[i].grade = assignGrade(students[i].averageMarks);
-    }
-
-   
-    printf("\nStudent Performance\n");
-    for (i = 0; i < numberOfStudents; i++) {
-        printf("Roll: %d\n", students[i].rollNumber);
-        printf("Name: %s\n", students[i].name);
-        printf("Total: %.2f\n", students[i].totalMarks);
-        printf("Average: %.2f\n", students[i].averageMarks);
-        printf("Grade: %c\n", students[i].grade);
-
-        if (students[i].averageMarks < 35) {
-            continue;
-        }
-
-        printf("Performance: ");
-        displayPerformance(students[i].grade);
         printf("\n");
     }
-
-    printf("List of Roll Numbers (via recursion): ");
-    printRollNumbersRecursively(students, 0, numberOfStudents);
-    printf("\n");
-
-    return 0;
 }
 
 
-float calculateTotal(float m[]) {
-    return m[0] + m[1] + m[2];
-}
-
-float calculateAverage(float total) {
-    return total / 3.0;
-}
-
-char assignGrade(float avg) {
-    if (avg >= 85)
-        return 'A';
-    else if (avg >= 70)
-        return 'B';
-    else if (avg >= 50)
-        return 'C';
-    else if (avg >= 35)
-        return 'D';
-    else
-        return 'F';
-}
-
-void displayPerformance(char grade) {
-    int stars = 0;
-    switch (grade) {
-        case 'A': stars = 5; break;
-        case 'B': stars = 4; break;
-        case 'C': stars = 3; break;
-        case 'D': stars = 2; break;
-        default: stars = 0; break;
-    }
-
-    for (int i = 0; i < stars; i++) {
-        printf("*");
-    }
-}
-
-void printRollNumbersRecursively(struct Student students[], int index, int count) {
-    if (index == count)
-        return;
-    printf("%d ", students[index].rollNumber);
-    printRollNumbersRecursively(students, index + 1, count);
-}
-
-
-int isDuplicateRoll(struct Student students[], int currentIndex, int roll) {
-    for (int i = 0; i < currentIndex; i++) {
-        if (students[i].rollNumber == roll)
-            return 1;
-    }
-    return 0;
-}
-
-void flushInput() {
-    char temp;
-    while ((temp = getchar()) != '\n' && temp != EOF);
-}
-
-int isNameValid(char name[]) {
-    int i = 0;
-    while (name[i] != '\0') {
-        if (!((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z'))) {
-            return 0; 
+void transposeMatrix(int *matrix, int matrixSize) {
+    for (int row = 0; row < matrixSize; row++) {
+        for (int col = row + 1; col < matrixSize; col++) {
+            int *cell1 = matrix + row * matrixSize + col;
+            int *cell2 = matrix + col * matrixSize + row;
+            int temp = *cell1;
+            *cell1 = *cell2;
+            *cell2 = temp;
         }
-        i++;
     }
-    return 1; 
+}
+
+
+void reverseRows(int *matrix, int matrixSize) {
+    for (int row = 0; row < matrixSize; row++) {
+        for (int col = 0; col < matrixSize / 2; col++) {
+            int *leftCell = matrix + row * matrixSize + col;
+            int *rightCell = matrix + row * matrixSize + (matrixSize - 1 - col);
+            int temp = *leftCell;
+            *leftCell = *rightCell;
+            *rightCell = temp;
+        }
+    }
+}
+
+
+void rotateMatrix90Clockwise(int *matrix, int matrixSize) {
+    transposeMatrix(matrix, matrixSize);
+    reverseRows(matrix, matrixSize);
+}
+
+void smoothMatrixInPlace(int *matrix, int matrixSize) {
+    int row, col, dRow, dCol;
+    for (row = 0; row < matrixSize; row++) {
+        for (col = 0; col < matrixSize; col++) {
+            int sum = 0, count = 0;
+         
+            for (dRow = -1; dRow <= 1; dRow++) {
+                int nRow = row + dRow;
+                if (nRow < 0 || nRow >= matrixSize) continue;
+                for (dCol = -1; dCol <= 1; dCol++) {
+                    int nCol = col + dCol;
+                    if (nCol < 0 || nCol >= matrixSize) continue;
+                    int val = *(matrix + nRow * matrixSize + nCol);
+                    
+                    if (val > 255) val = val % 256;
+                    sum += val;
+                    count++;
+                }
+            }
+            
+            int *cell = matrix + row * matrixSize + col;
+            *cell = *cell + (sum / count) * 256;
+        }
+    }
+
+  
+    for (row = 0; row < matrixSize; row++) {
+        for (col = 0; col < matrixSize; col++) {
+            int *cell = matrix + row * matrixSize + col;
+            *cell = *cell / 256;
+        }
+    }
+}
+
+int main() {
+    int matrixSize;
+
+    printf("Enter matrix size (2-10): ");
+    while (scanf("%d", &matrixSize) != 1 || matrixSize < 2 || matrixSize > 10) {
+        printf("Invalid size. Enter an integer between 2–10: ");
+        while (getchar() != '\n');
+    }
+
+    int *matrix = (int *)malloc(matrixSize * matrixSize * sizeof(int));
+    if (!matrix) return 1;
+
+    inputMatrix(matrix, matrixSize);
+
+    printf("Original Matrix:\n");
+    printMatrix(matrix, matrixSize);
+
+    rotateMatrix90Clockwise(matrix, matrixSize);
+    printf("Matrix after 90° Clockwise Rotation:\n");
+    printMatrix(matrix, matrixSize);
+
+    smoothMatrixInPlace(matrix, matrixSize);
+    printf("Matrix after Applying 3×3 Smoothing Filter:\n");
+    printMatrix(matrix, matrixSize);
+
+    free(matrix);
+    return 0;
 }
