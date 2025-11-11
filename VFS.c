@@ -1,17 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #define BLOCK_SIZE 512
 #define NUM_BLOCKS 1024
 #define MAX_NAME 50
 #define LINE 1024
 
-typedef struct FreeBlock {
-    int idx;
-    struct FreeBlock *next;
-    struct FreeBlock *prev;
-} FreeBlock;
-
+typedef struct FreeBlock { int idx; struct FreeBlock *next; struct FreeBlock *prev; } FreeBlock;
 typedef struct Node {
     char name[MAX_NAME+1];
     int is_dir;
@@ -24,11 +20,33 @@ typedef struct Node {
     int size_bytes;
 } Node;
 
+
 static unsigned char disk[NUM_BLOCKS][BLOCK_SIZE];
 static FreeBlock *free_head = NULL;
 static FreeBlock *free_tail = NULL;
 static Node *root = NULL;
 static Node *cwd = NULL;
+
+
+static void free_push_tail(int i);
+static int free_pop_head(void);
+static int count_free(void);
+static Node* find_child(Node *d, const char *name);
+static void insert_child(Node *d, Node *n);
+static void unlink_node(Node *n);
+static void cmd_mkdir(char *name);
+static void cmd_create(char *name);
+static void cmd_write(char *name, char *content);
+static void cmd_read(char *name);
+static void cmd_delete(char *name);
+static void cmd_rmdir(char *name);
+static void cmd_ls(void);
+static void cmd_cd(char *arg);
+static void cmd_pwd(void);
+static void cmd_df(void);
+static void init_vfs(void);
+static void cleanup_vfs(void);
+static void parse_line(char *line);
 
 
 static void free_push_tail(int i) {
@@ -37,47 +55,32 @@ static void free_push_tail(int i) {
     n->idx = i;
     n->next = NULL;
     n->prev = NULL;
-    if (!free_tail) {
-        free_head = n;
-        free_tail = n;
-        return;
-    }
+    if (!free_tail) { free_head = n; free_tail = n; return; }
     free_tail->next = n;
     n->prev = free_tail;
     free_tail = n;
 }
 static int free_pop_head(void) {
-    if (!free_head)
-    return -1;
+    if (!free_head) return -1;
     FreeBlock *n = free_head;
     int idx = n->idx;
     free_head = n->next;
-    if (free_head) 
-    free_head->prev = NULL;
-    else 
-    free_tail = NULL;
+    if (free_head) free_head->prev = NULL; else free_tail = NULL;
     free(n);
     return idx;
 }
 static int count_free(void) {
     int c = 0;
     FreeBlock *t = free_head;
-    while (t){
-        c++; t = t->next;
-        }
+    while (t) { c++; t = t->next; }
     return c;
 }
 
 
 static Node* find_child(Node *d, const char *name) {
-    if (!d || !d->is_dir || !d->child) 
-    return NULL;
+    if (!d || !d->is_dir || !d->child) return NULL;
     Node *it = d->child;
-    do {
-        if (strcmp(it->name, name) == 0) 
-        return it;
-        it = it->next;
-    } while (it != d->child);
+    do { if (strcmp(it->name, name) == 0) return it; it = it->next; } while (it != d->child);
     return NULL;
 }
 static void insert_child(Node *d, Node *n) {
@@ -88,10 +91,7 @@ static void insert_child(Node *d, Node *n) {
     n->blocks = NULL;
     n->blocks_count = 0;
     n->size_bytes = 0;
-    if (!d->child) {
-        d->child = n;
-        return;
-    }
+    if (!d->child) { d->child = n; return; }
     Node *h = d->child;
     Node *t = h->prev;
     t->next = n;
@@ -100,14 +100,9 @@ static void insert_child(Node *d, Node *n) {
     h->prev = n;
 }
 static void unlink_node(Node *n) {
-    if (!n || !n->parent) 
-    return;
+    if (!n || !n->parent) return;
     Node *p = n->parent;
-    if (p->child == n) {
-        if (n->next == n) p->child = NULL;
-        else
-        p->child = n->next;
-    }
+    if (p->child == n) { if (n->next == n) p->child = NULL; else p->child = n->next; }
     n->prev->next = n->next;
     n->next->prev = n->prev;
     n->next = n;
@@ -116,20 +111,10 @@ static void unlink_node(Node *n) {
 }
 
 static void cmd_mkdir(char *name) {
-    if (!name || !*name) {
-        puts("Name required");
-        return;
-        }
-    if (find_child(cwd, name)) {
-        printf("'%s' exists\n", name); 
-        return; 
-        
-    }
+    if (!name || !*name) { puts("Name required"); return; }
+    if (find_child(cwd, name)) { printf("'%s' exists\n", name); return; }
     Node *n = malloc(sizeof(Node));
-    if (!n) {
-        puts("Memory error"); 
-        exit(1);
-        }
+    if (!n) { puts("Memory error"); exit(1); }
     memset(n, 0, sizeof(Node));
     strncpy(n->name, name, MAX_NAME);
     n->is_dir = 1;
@@ -137,20 +122,10 @@ static void cmd_mkdir(char *name) {
     printf("Directory '%s' created\n", name);
 }
 static void cmd_create(char *name) {
-    if (!name || !*name) {
-        puts("Name required");
-        return;
-        }
-    if (find_child(cwd, name)) { 
-        printf("'%s' exists\n", name); 
-        return; 
-        
-    }
+    if (!name || !*name) { puts("Name required"); return; }
+    if (find_child(cwd, name)) { printf("'%s' exists\n", name); return; }
     Node *n = malloc(sizeof(Node));
-    if (!n) { 
-        puts("Memory error"); 
-        exit(1);
-        }
+    if (!n) { puts("Memory error"); exit(1); }
     memset(n, 0, sizeof(Node));
     strncpy(n->name, name, MAX_NAME);
     n->is_dir = 0;
@@ -158,22 +133,12 @@ static void cmd_create(char *name) {
     printf("File '%s' created\n", name);
 }
 static void cmd_write(char *name, char *content) {
-    if (!name || !*name) {
-        printf("Usage: write <file> \"text\"\n");
-        return; }
+    if (!name || !*name) { printf("Usage: write <file> \"text\"\n"); return; }
     Node *f = find_child(cwd, name);
-    if (!f) { 
-        printf("File '%s' not found\n", name);
-        return;
-        }
-    if (f->is_dir) { 
-        printf("'%s' is directory\n", name); 
-        return; 
-        
-    }
+    if (!f) { printf("File '%s' not found\n", name); return; }
+    if (f->is_dir) { printf("'%s' is directory\n", name); return; }
     if (f->blocks && f->blocks_count > 0) {
-        for (int i = 0; i < f->blocks_count; i++) 
-        free_push_tail(f->blocks[i]);
+        for (int i = 0; i < f->blocks_count; i++) free_push_tail(f->blocks[i]);
         free(f->blocks);
         f->blocks = NULL;
         f->blocks_count = 0;
@@ -181,72 +146,40 @@ static void cmd_write(char *name, char *content) {
     }
     int len = (int)strlen(content);
     int need = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    if (need == 0) 
-    need = 1;
-    if (count_free() < need) {
-        puts("Disk full. Write failed"); 
-        return;
-        }
+    if (need == 0) need = 1;
+    if (count_free() < need) { puts("Disk full. Write failed"); return; }
     f->blocks = malloc(sizeof(int) * need);
     for (int i = 0; i < need; i++) {
         int idx = free_pop_head();
         f->blocks[i] = idx;
         int off = i * BLOCK_SIZE;
         int towrite = BLOCK_SIZE;
-        if (off + towrite > len) 
-        towrite = len - off;
-        if (towrite > 0) 
-        memcpy(disk[idx], content + off, towrite);
-        else disk[idx][0] = '\0';
+        if (off + towrite > len) towrite = len - off;
+        if (towrite > 0) memcpy(disk[idx], content + off, towrite); else disk[idx][0] = '\0';
     }
     f->blocks_count = need;
     f->size_bytes = len;
     printf("Wrote %d bytes in %d blocks\n", len, need);
 }
 static void cmd_read(char *name) {
-    if (!name || !*name) { 
-        printf("Usage: read <file>\n");
-        return; 
-        
-    }
+    if (!name || !*name) { printf("Usage: read <file>\n"); return; }
     Node *f = find_child(cwd, name);
-    if (!f) {
-        printf("File '%s' not found\n", name); 
-        return;
-        }
-    if (f->is_dir){
-    printf("'%s' is directory\n", name);
-    return;
-    }
-    if (!f->blocks || f->blocks_count == 0) {
-        puts("(empty)");
-        return;
-        }
+    if (!f) { printf("File '%s' not found\n", name); return; }
+    if (f->is_dir) { printf("'%s' is directory\n", name); return; }
+    if (!f->blocks || f->blocks_count == 0) { puts("(empty)"); return; }
     int rem = f->size_bytes;
     for (int i = 0; i < f->blocks_count; i++) {
         int toread = rem < BLOCK_SIZE ? rem : BLOCK_SIZE;
-        if (toread > 0) 
-        fwrite(disk[f->blocks[i]], 1, toread, stdout);
+        if (toread > 0) fwrite(disk[f->blocks[i]], 1, toread, stdout);
         rem -= toread;
     }
     puts("");
 }
 static void cmd_delete(char *name) {
-    if (!name || !*name) {
-        puts("Usage: delete <file>");
-        return; 
-        
-    }
+    if (!name || !*name) { puts("Usage: delete <file>"); return; }
     Node *f = find_child(cwd, name);
-    if (!f) { 
-        printf("File '%s' not found\n", name);
-        return;
-        }
-    if (f->is_dir) {
-        printf("'%s' is directory\n", name);
-        return; 
-        
-    }
+    if (!f) { printf("File '%s' not found\n", name); return; }
+    if (f->is_dir) { printf("'%s' is directory\n", name); return; }
     if (f->blocks) {
         for (int i = 0; i < f->blocks_count; i++) free_push_tail(f->blocks[i]);
         free(f->blocks);
@@ -256,47 +189,22 @@ static void cmd_delete(char *name) {
     puts("File deleted");
 }
 static void cmd_rmdir(char *name) {
-    if (!name || !*name) {
-        puts("Usage: rmdir <dir>");
-        return; 
-        
-    }
+    if (!name || !*name) { puts("Usage: rmdir <dir>"); return; }
     Node *d = find_child(cwd, name);
-    if (!d) { 
-        printf("Directory '%s' not found\n", name);
-        return;
-        }
-    if (!d->is_dir) { 
-        printf("'%s' is not directory\n", name); 
-        return;
-        }
-    if (d->child) {
-        puts("Directory not empty"); 
-        return;
-        }
+    if (!d) { printf("Directory '%s' not found\n", name); return; }
+    if (!d->is_dir) { printf("'%s' is not directory\n", name); return; }
+    if (d->child) { puts("Directory not empty"); return; }
     unlink_node(d);
     free(d);
     puts("Directory removed");
 }
 static void cmd_ls(void) {
-    if (!cwd->child) {
-        puts("(empty)");
-        return; 
-        
-    }
+    if (!cwd->child) { puts("(empty)"); return; }
     Node *it = cwd->child;
-    do {
-        if (it->is_dir) printf("%s/\n", it->name);
-        else printf("%s\n", it->name);
-        it = it->next;
-    } while (it != cwd->child);
+    do { if (it->is_dir) printf("%s/\n", it->name); else printf("%s\n", it->name); it = it->next; } while (it != cwd->child);
 }
 static void cmd_cd(char *arg) {
-    if (!arg || !*arg) {
-        puts("Usage: cd <dir>");
-        return; 
-        
-    }
+    if (!arg || !*arg) { puts("Usage: cd <dir>"); return; }
     if (strcmp(arg, "/") == 0) { cwd = root; puts("Moved to /"); return; }
     if (strcmp(arg, "..") == 0) {
         if (cwd->parent) {
@@ -304,73 +212,33 @@ static void cmd_cd(char *arg) {
             Node *tmp = cwd;
             char parts[100][MAX_NAME+1];
             int pc = 0;
-            while (tmp && tmp->parent) {
-                strncpy(parts[pc], tmp->name, MAX_NAME);
-                pc++;
-                tmp = tmp->parent;
-            }
-            if (pc == 0) puts("/");
-            else {
-                printf("/");
-                for (int i = pc - 1; i >= 0; i--) {
-                    printf("%s", parts[i]);
-                    if (i > 0) printf("/");
-                }
-                puts("");
-            }
+            while (tmp && tmp->parent) { strncpy(parts[pc], tmp->name, MAX_NAME); pc++; tmp = tmp->parent; }
+            if (pc == 0) puts("/"); else { printf("/"); for (int i = pc - 1; i >= 0; i--) { printf("%s", parts[i]); if (i > 0) printf("/"); } puts(""); }
         } else puts("Already at root");
         return;
     }
     Node *t = find_child(cwd, arg);
-    if (!t) { 
-        printf("No such dir '%s'\n", arg); 
-    return;
-    }
+    if (!t) { printf("No such dir '%s'\n", arg); return; }
     if (!t->is_dir) { printf("'%s' is not dir\n", arg); return; }
     cwd = t;
     Node *tmp = cwd;
     char parts[100][MAX_NAME+1];
     int pc = 0;
-    while (tmp && tmp->parent) {
-        strncpy(parts[pc], tmp->name, MAX_NAME);
-        pc++;
-        tmp = tmp->parent;
-    }
-    if (pc == 0) puts("/");
-    else {
-        printf("/");
-        for (int i = pc - 1; i >= 0; i--) {
-            printf("%s", parts[i]);
-            if (i > 0) printf("/");
-        }
-        puts("");
-    }
+    while (tmp && tmp->parent) { strncpy(parts[pc], tmp->name, MAX_NAME); pc++; tmp = tmp->parent; }
+    if (pc == 0) puts("/"); else { printf("/"); for (int i = pc - 1; i >= 0; i--) { printf("%s", parts[i]); if (i > 0) printf("/"); } puts(""); }
 }
 static void cmd_pwd(void) {
     Node *tmp = cwd;
     char parts[100][MAX_NAME+1];
     int pc = 0;
-    while (tmp && tmp->parent) {
-        strncpy(parts[pc], tmp->name, MAX_NAME);
-        pc++;
-        tmp = tmp->parent;
-    }
-    if (pc == 0) puts("/");
-    else {
-        printf("/");
-        for (int i = pc - 1; i >= 0; i--) {
-            printf("%s", parts[i]);
-            if (i > 0) printf("/");
-        }
-        puts("");
-    }
+    while (tmp && tmp->parent) { strncpy(parts[pc], tmp->name, MAX_NAME); pc++; tmp = tmp->parent; }
+    if (pc == 0) puts("/"); else { printf("/"); for (int i = pc - 1; i >= 0; i--) { printf("%s", parts[i]); if (i > 0) printf("/"); } puts(""); }
 }
 static void cmd_df(void) {
     int freec = count_free();
     int used = NUM_BLOCKS - freec;
     double pct = (double) used / (double) NUM_BLOCKS * 100.0;
-    printf("Total Blocks: %d\nUsed Blocks: %d\nFree Blocks: %d\nDisk Usage: %.2f%%\n",
-           NUM_BLOCKS, used, freec, pct);
+    printf("Total Blocks: %d\nUsed Blocks: %d\nFree Blocks: %d\nDisk Usage: %.2f%%\n", NUM_BLOCKS, used, freec, pct);
 }
 
 
@@ -394,11 +262,7 @@ static void cleanup_vfs(void) {
         Node *it = root->child;
         Node **arr = NULL;
         int cnt = 0;
-        do {
-            arr = realloc(arr, (cnt + 1) * sizeof(Node *));
-            arr[cnt++] = it;
-            it = it->next;
-        } while (it != root->child);
+        do { arr = realloc(arr, (cnt + 1) * sizeof(Node *)); arr[cnt++] = it; it = it->next; } while (it != root->child);
         for (int i = 0; i < cnt; i++) {
             Node *n = arr[i];
             if (n->is_dir) {
@@ -406,11 +270,7 @@ static void cleanup_vfs(void) {
                     Node *s = n->child;
                     Node **sarr = NULL;
                     int sc = 0;
-                    do {
-                        sarr = realloc(sarr, (sc + 1) * sizeof(Node *));
-                        sarr[sc++] = s;
-                        s = s->next;
-                    } while (s != n->child);
+                    do { sarr = realloc(sarr, (sc + 1) * sizeof(Node *)); sarr[sc++] = s; s = s->next; } while (s != n->child);
                     for (int j = 0; j < sc; j++) {
                         if (!sarr[j]->is_dir && sarr[j]->blocks) {
                             for (int b = 0; b < sarr[j]->blocks_count; b++) free_push_tail(sarr[j]->blocks[b]);
@@ -433,19 +293,67 @@ static void cleanup_vfs(void) {
     }
     free(root);
     FreeBlock *fb = free_head;
-    while (fb) {
-        FreeBlock *nx = fb->next;
-        free(fb);
-        fb = nx;
-    }
+    while (fb) { FreeBlock *nx = fb->next; free(fb); fb = nx; }
     free_head = free_tail = NULL;
 }
 
+
+static void print_menu(void) {
+    printf("Menu — enter a number for help about a command (or type command):\n");
+    printf(" 1. mkdir <name>\n");
+    printf(" 2. create <name>\n");
+    printf(" 3. write <file> \"text\"\n");
+    printf(" 4. read <file>\n");
+    printf(" 5. delete <file>\n");
+    printf(" 6. rmdir <dir>\n");
+    printf(" 7. ls\n");
+    printf(" 8. cd <dir> | cd .. | cd /\n");
+    printf(" 9. pwd\n");
+    printf("10. df\n");
+    printf("11. help\n");
+    printf("12. exit\n");
+    printf("Type the number (1-12) to see usage for that option.\n");
+}
+
+static void print_help_for_choice(int n) {
+    switch (n) {
+        case 1: printf("mkdir <name> — create directory in current folder\nExample: mkdir docs\n"); break;
+        case 2: printf("create <name> — create empty file\nExample: create notes.txt\n"); break;
+        case 3: printf("write <file> \"text\" — write (overwrite) file with quoted text\nExample: write notes.txt \"Hello\"\n"); break;
+        case 4: printf("read <file> — read and print file contents\nExample: read notes.txt\n"); break;
+        case 5: printf("delete <file> — delete a file (frees blocks)\nExample: delete notes.txt\n"); break;
+        case 6: printf("rmdir <dir> — remove empty directory\nExample: rmdir docs\n"); break;
+        case 7: printf("ls — list entries in current directory\nExample: ls\n"); break;
+        case 8: printf("cd <dir> | cd .. | cd / — change directory\nExample: cd docs\n"); break;
+        case 9: printf("pwd — print current working directory\n"); break;
+        case 10: printf("df — show disk usage\n"); break;
+        case 11: printf("help — full help menu\n"); break;
+        case 12: printf("exit — free memory and exit program\n"); break;
+        default: printf("Not a valid choice\n"); break;
+    }
+}
+
+
+static int is_number_token(const char *s) {
+    if (!s || !*s) return 0;
+    int i = 0;
+    while (s[i] && s[i] != ' ' && s[i] != '\t' && s[i] != '\n') {
+        if (s[i] < '0' || s[i] > '9') return 0;
+        i++;
+    }
+    return i > 0;
+}
 
 static void parse_line(char *line) {
     char *p = line;
     while (*p && (*p == ' ' || *p == '\t' || *p == '\n')) p++;
     if (!*p) return;
+  
+    if (is_number_token(p)) {
+        int val = atoi(p);
+        if (val >= 1 && val <= 12) { print_help_for_choice(val); return; }
+    }
+  
     char cmd[64];
     int i = 0;
     while (p[i] && p[i] != ' ' && p[i] != '\t' && p[i] != '\n') i++;
@@ -453,6 +361,7 @@ static void parse_line(char *line) {
     cmd[i] = '\0';
     char *args = p + i;
     while (*args == ' ' || *args == '\t') args++;
+    if (strcmp(cmd, "help") == 0) { print_menu(); return; }
     if (strcmp(cmd, "mkdir") == 0) {
         char name[MAX_NAME+1];
         if (sscanf(args, "%50s", name) == 1) cmd_mkdir(name);
@@ -484,9 +393,7 @@ static void parse_line(char *line) {
             strncpy(content, rest, clen);
             content[clen] = '\0';
             cmd_write(fname, content);
-        } else {
-            puts("write <file> \"text\"");
-        }
+        } else { puts("write <file> \"text\""); }
         return;
     }
     if (strcmp(cmd, "read") == 0) {
@@ -518,31 +425,21 @@ static void parse_line(char *line) {
     if (strcmp(cmd, "df") == 0) { cmd_df(); return; }
     if (strcmp(cmd, "exit") == 0) { cleanup_vfs(); puts("Exiting..."); exit(0); }
     printf("Unknown: %s\n", cmd);
+    printf("Type a menu number (1-12) or 'help' to list commands.\n");
 }
 
 
 int main(void) {
     init_vfs();
-    puts("Short VFS ready. Type 'exit' to quit.");
+    print_menu();
     char line[LINE];
     while (1) {
         Node *t = cwd;
         char parts[100][MAX_NAME+1];
         int pc = 0;
-        while (t && t->parent) {
-            strncpy(parts[pc], t->name, MAX_NAME);
-            pc++;
-            t = t->parent;
-        }
+        while (t && t->parent) { strncpy(parts[pc], t->name, MAX_NAME); pc++; t = t->parent; }
         if (pc == 0) printf("/ > ");
-        else {
-            printf("/");
-            for (int i = pc - 1; i >= 0; i--) {
-                printf("%s", parts[i]);
-                if (i > 0) printf("/");
-            }
-            printf(" > ");
-        }
+        else { printf("/"); for (int i = pc - 1; i >= 0; i--) { printf("%s", parts[i]); if (i > 0) printf("/"); } printf(" > "); }
         if (!fgets(line, sizeof(line), stdin)) break;
         parse_line(line);
     }
